@@ -71,6 +71,7 @@ module Paranoia
         end
         @_trigger_destroy_callback = true
         @_disable_counter_cache = false
+        @_trigger_destroy_callback = true
         result
       end
     end
@@ -187,6 +188,24 @@ module Paranoia
 
   def timestamp_attributes_with_current_time
     timestamp_attributes_for_update_in_model.each_with_object({}) { |attr,hash| hash[attr] = current_time_from_proper_timezone }
+  end
+
+  def transaction_include_any_action?(actions)
+    actions.any? do |action|
+      case action
+      when :create
+        transaction_record_state(:new_record)
+      when :destroy
+        defined?(@_trigger_destroy_callback) && @_trigger_destroy_callback
+      when :update
+        !(transaction_record_state(:new_record) || transaction_include_destroy?) &&
+          (defined?(@_trigger_update_callback) && @_trigger_update_callback)
+      end
+    end
+  end
+
+  def transaction_include_destroy?
+    destroyed? || try(:paranoia_destroyed?)
   end
 
   # restore associated records that have been soft deleted when
