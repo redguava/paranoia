@@ -194,12 +194,12 @@ module Paranoia
     actions.any? do |action|
       case action
       when :create
-        transaction_record_state(:new_record)
+        persisted? && @_new_record_before_last_commit
       when :destroy
-        defined?(@_trigger_destroy_callback) && @_trigger_destroy_callback
+        _trigger_destroy_callback
       when :update
-        !(transaction_record_state(:new_record) || transaction_include_destroy?) &&
-          (defined?(@_trigger_update_callback) && @_trigger_update_callback)
+        !(@_new_record_before_last_commit || transaction_include_destroy?) &&
+          _trigger_update_callback
       end
     end
   end
