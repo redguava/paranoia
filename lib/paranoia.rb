@@ -102,12 +102,12 @@ module Paranoia
 
   def restore!(opts = {})
     self.class.transaction do
-      run_callbacks(:restore) do
-        recovery_window_range = get_recovery_window_range(opts)
-        # Fixes a bug where the build would error because attributes were frozen.
-        # This only happened on Rails versions earlier than 4.1.
-        noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
-        if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
+      recovery_window_range = get_recovery_window_range(opts)
+      # Fixes a bug where the build would error because attributes were frozen.
+      # This only happened on Rails versions earlier than 4.1.
+      noop_if_frozen = ActiveRecord.version < Gem::Version.new("4.1")
+      if within_recovery_window?(recovery_window_range) && ((noop_if_frozen && !@attributes.frozen?) || !noop_if_frozen)
+        run_callbacks(:restore) do
           @_disable_counter_cache = !paranoia_destroyed?
           write_attribute paranoia_column, paranoia_sentinel_value
           update_columns(paranoia_restore_attributes)
@@ -117,8 +117,9 @@ module Paranoia
             end
           end
           @_disable_counter_cache = false
+
+          restore_associated_records(recovery_window_range) if opts[:recursive]
         end
-        restore_associated_records(recovery_window_range) if opts[:recursive]
       end
     end
 
